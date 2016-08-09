@@ -1,6 +1,6 @@
 'use strict';
 
-var EventEmitter2 = require( 'eventemitter2' ).EventEmitter2;
+var EventEmitter = require( 'events' );
 
 /*
     dependencies
@@ -28,8 +28,8 @@ function matches( el, selector ) {
     var nodes = document.querySelectorAll( selector, el.parentNode );
     for ( var i = 0; i < nodes.length; ++i ) {
         if ( nodes[ i ] === el ) {
-            return true;  
-        } 
+            return true;
+        }
     }
     return false;
 }
@@ -37,7 +37,9 @@ function matches( el, selector ) {
 /* closest */
 
 function closest( element, selector, checkSelf, root ) {
-    element = checkSelf ? {parentNode: element} : element;
+    element = checkSelf ? {
+        parentNode: element
+    } : element;
 
     root = root || document;
 
@@ -51,7 +53,7 @@ function closest( element, selector, checkSelf, root ) {
         /* After `matches` on the edge case that
            the selector matches the root
            (when the root is not the document) */
-        if (element === root) {
+        if ( element === root ) {
             return;
         }
     }
@@ -63,7 +65,7 @@ function closest( element, selector, checkSelf, root ) {
 
 function Emit() {
     var self = this;
-    EventEmitter2.call( self );
+    EventEmitter.call( self );
 
     self.validators = [];
     self.touchMoveDelta = 10;
@@ -77,7 +79,7 @@ function Emit() {
     bind( document, 'submit', self.handleEvent.bind( self ) );
 }
 
-Emit.prototype = Object.create( EventEmitter2.prototype );
+Emit.prototype = Object.create( EventEmitter.prototype );
 
 function getTouchDelta( event, initial ) {
     var deltaX = ( event.touches[ 0 ].pageX - initial.x );
@@ -143,13 +145,13 @@ Emit.prototype.handleEvent = function( event ) {
             var selector = 'a,button,input,[data-emit]';
             var originalElement = event.target || event.srcElement;
             var el = originalElement;
-            
+
             var depth = -1;
             var handled = false;
-            while( el && event.propagationStoppedAt > depth && ++depth < 100 ) {
+            while ( el && event.propagationStoppedAt > depth && ++depth < 100 ) {
                 event.emitTarget = el;
                 event.depth = depth;
-                
+
                 if ( !el.hasAttribute( 'data-emit' ) ) {
                     // if it's a link, button or input and it has no emit attribute, allow the event to pass
                     if ( el.tagName === 'A' || el.tagName === 'BUTTON' || el.tagName === 'INPUT' ) {
@@ -179,7 +181,7 @@ Emit.prototype.handleEvent = function( event ) {
                     el = null;
                     continue;
                 }
-                
+
                 if ( typeof( self.validate ) === 'function' && !self.validate.call( self, el ) ) {
                     el = closest( el, selector, false, document );
                     continue;
@@ -207,7 +209,7 @@ Emit.prototype.handleEvent = function( event ) {
                 handled |= self._emit( el, event, forceAllowDefault );
                 el = closest( el, selector, false, document );
             }
-            
+
             if ( !handled ) {
                 self.emit( 'unhandled', event );
             }
@@ -266,8 +268,8 @@ Emit.prototype._emit = function( element, event, forceDefault ) {
         if ( self.timeouts[ element ] ) {
             clearTimeout( self.timeouts[ element ] );
         }
-        
-        (function() {
+
+        ( function() {
             var _element = element;
             var _emissions = emissions;
             var _event = event;
@@ -282,11 +284,11 @@ Emit.prototype._emit = function( element, event, forceDefault ) {
 
         return true;
     }
-    
+
     emissions.forEach( function( emission ) {
         self.emit( emission, event );
     } );
-    
+
     return true;
 };
 
