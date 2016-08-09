@@ -1,17 +1,16 @@
 {
     "name": "emit-bindings",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "repository": {
         "type": "git",
-        "url": "https://github.com/honeinc/emit-bindings.git"
+        "url": "https://github.com/andyburke/emit-bindings.git"
     },
     "author": {
         "name": "Andy Burke",
         "email": "aburke@bitflood.org",
         "url": "http://github.com/andyburke"
     },
-    "company": "Hone Inc (http://gohone.com)",
-    "homepage": "https://github.com/honeinc/emit-bindings",
+    "homepage": "https://github.com/andyburke/emit-bindings",
     "description": "Emit events on DOM element interaction using data-emit attributes.",
     "keywords": [
         "event",
