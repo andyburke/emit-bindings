@@ -149,7 +149,7 @@ Emit.prototype.handleEvent = function( event ) {
             var depth = -1;
             var handled = false;
             while ( el && event.propagationStoppedAt > depth && ++depth < 100 ) {
-                event.emitTarget = el;
+                event.el = el;
                 event.depth = depth;
 
                 if ( !el.hasAttribute( 'data-emit' ) ) {

@@ -128,6 +128,14 @@ Emit.removeValidator( busyCheck );
 MIT
 
 # Changelog
+2.0.0
+-----
+* event.emitTarget -> event.el
+
+1.2.x
+-----
+* Refactored dependencies and build process
+
 1.1.1
 -----
 * Handle hitting basic types (a, input, button) even when they have an element inside them.
