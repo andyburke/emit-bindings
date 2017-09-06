@@ -5,16 +5,20 @@ Emit events on DOM element interaction using data-emit attributes.
 # Install
 
 ```bash
-npm install --save honeinc/emit-bindings
+npm install --save emit-bindings
 ```
 
-To include a prebuilt version directly in your page, use build/emit-(version).js or build/emit-(version).min.js:
+To include a prebuilt version directly in your page, use build/(version)/emit-bindings.js or build/(version)/emit-bindings.min.js:
 
 ```html
-<script type="text/javascript" src="emit-1.1.2.min.js"></script>
+<script type="text/javascript" src="build/(version)/emit-bindings.min.js"></script>
 
 <script>
-var emit = require( 'emit-bindings' );
+const Emit = require( 'emit-bindings' );
+
+const emit = Object.assign( {}, Emit );
+
+emit.monitor( document );
 
 emit.on( 'foo', function( event ) {
     console.log( 'got a foo event' );
@@ -92,9 +96,9 @@ You can add/remove 'validators' within Emit that can validate that a given event
 
 If one of the validators fails on an element, the event will be stopped and eaten at that element.
 
-### Emit.addValidator
+### Emit.add_validator
 
-addValidator will add a validation function to Emit. It takes a single function as an argument.
+add_validator will add a validation function to Emit. It takes a single function as an argument.
 
 The validation function will be called back when Emit is handling an event. The function's this
 context will be set to Emit and it will received two arguments: the element being processed and
@@ -103,24 +107,24 @@ the event:
 ```javascript
 // add a validator to stop clicks on elements that have the data-busy attribute
 
-emit.addValidator( function( element, event ) {
-    return !$( element ).data( 'busy' );
+emit.add_validator( function( element, event ) {
+    return !element.dataset.busy;
 } );
 ```
 
-### Emit.removeValidator
+### Emit.remove_validator
 
-removeValidator will remove the given validation function from Emit's list of validators. It takes
+remove_validator will remove the given validation function from Emit's list of validators. It takes
 a single argument: the function to remove.
 
 ```javascript
-function busyCheck( element, event ) {
-    return !$( element ).data( 'busy' );
+function check_busy( element, event ) {
+    return !element.dataset.busy;
 }
 
-Emit.addValidator( busyCheck );
+emit.add_validator( check_busy );
 
-Emit.removeValidator( busyCheck );
+emit.remove_validator( check_busy );
 ```
 
 # License
@@ -128,6 +132,14 @@ Emit.removeValidator( busyCheck );
 MIT
 
 # Changelog
+3.0.0
+-----
+* update to es2015 const/let
+* remove singleton
+* update API and variable naming conventions
+* move away from function/prototype and toward Object.assign() inheritance
+* remove dependency on EventEmitter
+
 2.0.0
 -----
 * event.emitTarget -> event.el
