@@ -1,32 +1,26 @@
 'use strict';
 
-var EventEmitter = require( 'events' );
-
-/*
-    dependencies
-*/
-
 /* binding */
-var bindingMethod = window.addEventListener ? 'addEventListener' : 'attachEvent';
-var eventPrefix = bindingMethod !== 'addEventListener' ? 'on' : '';
+const binding_method = window.addEventListener ? 'addEventListener' : 'attachEvent';
+const event_prefix = binding_method !== 'addEventListener' ? 'on' : '';
 
 function bind( el, type, fn, capture ) {
-    el[ bindingMethod ]( eventPrefix + type, fn, capture || false );
+    el[ binding_method ]( event_prefix + type, fn, capture || false );
     return fn;
 }
 
 /* matching */
-var vendorMatch = Element.prototype.matches || Element.prototype.webkitMatchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector;
+const vendor_match = Element.prototype.matches || Element.prototype.webkitMatchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector;
 
 function matches( el, selector ) {
     if ( !el || el.nodeType !== 1 ) {
         return false;
     }
-    if ( vendorMatch ) {
-        return vendorMatch.call( el, selector );
+    if ( vendor_match ) {
+        return vendor_match.call( el, selector );
     }
-    var nodes = document.querySelectorAll( selector, el.parentNode );
-    for ( var i = 0; i < nodes.length; ++i ) {
+    const nodes = document.querySelectorAll( selector, el.parentNode );
+    for ( let i = 0; i < nodes.length; ++i ) {
         if ( nodes[ i ] === el ) {
             return true;
         }
@@ -36,8 +30,8 @@ function matches( el, selector ) {
 
 /* closest */
 
-function closest( element, selector, checkSelf, root ) {
-    element = checkSelf ? {
+function closest( element, selector, check_self, root ) {
+    element = check_self ? {
         parentNode: element
     } : element;
 
@@ -59,39 +53,68 @@ function closest( element, selector, checkSelf, root ) {
     }
 }
 
-/*
-    end dependencies
-*/
+function string_list_to_hash( list, test ) {
+    test = test || /[,|\s]+/g;
 
-function Emit() {
-    var self = this;
-    EventEmitter.call( self );
+    const hash = list.split( test ).map( ( _hash, value ) => {
+        _hash[ value ] = true;
+        return _hash
+    }, {} );
 
-    self.validators = [];
-    self.touchMoveDelta = 10;
-    self.initialTouchPoint = null;
-
-    bind( document, 'touchstart', self.handleEvent.bind( self ) );
-    bind( document, 'touchmove', self.handleEvent.bind( self ) );
-    bind( document, 'touchend', self.handleEvent.bind( self ) );
-    bind( document, 'click', self.handleEvent.bind( self ) );
-    bind( document, 'input', self.handleEvent.bind( self ) );
-    bind( document, 'submit', self.handleEvent.bind( self ) );
+    return hash;
 }
 
-Emit.prototype = Object.create( EventEmitter.prototype );
-
-function getTouchDelta( event, initial ) {
-    var deltaX = ( event.touches[ 0 ].pageX - initial.x );
-    var deltaY = ( event.touches[ 0 ].pageY - initial.y );
-    return Math.sqrt( ( deltaX * deltaX ) + ( deltaY * deltaY ) );
+function get_touch_delta( event, initial ) {
+    const delta_x = ( event.touches[ 0 ].pageX - initial.x );
+    const delta_y = ( event.touches[ 0 ].pageY - initial.y );
+    return Math.sqrt( ( delta_x * delta_x ) + ( delta_y * delta_y ) );
 }
 
-Emit.prototype.handleEvent = function( event ) {
-    var self = this;
+const Emit = {
+    touch_move_delta: 10,
+    default_selector: 'a,button,input,[data-emit]',
 
-    var touches = event.touches;
-    var delta = -1;
+    _initial_touch_point: null
+};
+
+Emit.monitor = function( element ) {
+    this._element = element;
+    bind( this._element, 'touchstart', this._handle_event.bind( this ) );
+    bind( this._element, 'touchmove', this._handle_event.bind( this ) );
+    bind( this._element, 'touchend', this._handle_event.bind( this ) );
+    bind( this._element, 'click', this._handle_event.bind( this ) );
+    bind( this._element, 'input', this._handle_event.bind( this ) );
+    bind( this._element, 'submit', this._handle_event.bind( this ) );
+};
+
+Emit.on = Emit.addListener = Emit.addEventListener = Emit.bind = function( event, callback ) {
+    this._events = this._events || {};
+    this._events[ event ] = this._events[ event ] || [];
+    this._events[ event ].push( callback );
+    return this;
+};
+
+Emit.off = Emit.removeListener = Emit.removeEventListener = Emit.unbind = function( event, callback ) {
+    this._events = this._events || {};
+    const handlers = this._events[ event ] || [];
+    const handler_index = handlers.indexOf( callback );
+    if ( handler_index !== -1 ) {
+        handlers.splice( handler_index, 1 );
+    }
+    return this;
+};
+
+Emit.emit = Emit.trigger = function( event /* ... args */ ) {
+    this._events = this._events || {};
+    const handlers = this._events[ event ] || [];
+    handlers.forEach( handler => {
+        handler.apply( this, Array.prototype.slice.call( arguments, 1 ) );
+    } );
+};
+
+Emit._handle_event = function( event ) {
+    const touches = event.touches;
+    let delta = -1;
 
     if ( typeof event.propagationStoppedAt !== 'number' || isNaN( event.propagationStoppedAt ) ) {
         event.propagationStoppedAt = 100; // highest possible value
@@ -99,7 +122,7 @@ Emit.prototype.handleEvent = function( event ) {
 
     switch ( event.type ) {
         case 'touchstart':
-            self.initialTouchPoint = self.lastTouchPoint = {
+            this._initial_touch_point = this._last_touch_point = {
                 x: touches && touches.length ? touches[ 0 ].pageX : 0,
                 y: touches && touches.length ? touches[ 0 ].pageY : 0
             };
@@ -107,13 +130,13 @@ Emit.prototype.handleEvent = function( event ) {
             break;
 
         case 'touchmove':
-            if ( touches && touches.length && self.initialTouchPoint ) {
-                delta = getTouchDelta( event, self.initialTouchPoint );
-                if ( delta > self.touchMoveDelta ) {
-                    self.initialTouchPoint = null;
+            if ( touches && touches.length && this._initial_touch_point ) {
+                delta = get_touch_delta( event, this._initial_touch_point );
+                if ( delta > this._touch_move_delta ) {
+                    this._initial_touch_point = null;
                 }
 
-                self.lastTouchPoint = {
+                this._last_touch_point = {
                     x: touches[ 0 ].pageX,
                     y: touches[ 0 ].pageY
                 };
@@ -126,10 +149,10 @@ Emit.prototype.handleEvent = function( event ) {
         case 'input':
         case 'submit':
             // eat any late-firing click events on touch devices
-            if ( event.type === 'click' && self.lastTouchPoint ) {
+            if ( event.type === 'click' && this._last_touch_point ) {
                 if ( event.touches && event.touches.length ) {
-                    delta = getTouchDelta( event, self.lastTouchPoint );
-                    if ( delta < self.touchMoveDelta ) {
+                    delta = get_touch_delta( event, this._last_touch_point );
+                    if ( delta < this._touch_move_delta ) {
                         event.preventDefault();
                         event.stopPropagation();
                         return;
@@ -138,16 +161,14 @@ Emit.prototype.handleEvent = function( event ) {
             }
 
             // handle canceling touches that have moved too much
-            if ( event.type === 'touchend' && !self.initialTouchPoint ) {
+            if ( event.type === 'touchend' && !this._initial_touch_point ) {
                 return;
             }
 
-            var selector = 'a,button,input,[data-emit]';
-            var originalElement = event.target || event.srcElement;
-            var el = originalElement;
+            let el = event.target || event.srcElement;
 
-            var depth = -1;
-            var handled = false;
+            let depth = -1;
+            let handled = false;
             while ( el && event.propagationStoppedAt > depth && ++depth < 100 ) {
                 event.el = el;
                 event.depth = depth;
@@ -158,16 +179,17 @@ Emit.prototype.handleEvent = function( event ) {
                         return;
                     }
                     else {
-                        el = closest( el, selector, false, document );
+                        el = closest( el, this.default_selector, false, this._element );
                         continue;
                     }
                 }
 
-                var forceAllowDefault = el.tagName === 'INPUT' && ( el.type === 'checkbox' || el.type === 'radio' );
+                const force_allow_default = el.tagName === 'INPUT' && ( el.type === 'checkbox' || el.type === 'radio' );
 
-                var validated = true;
-                for ( var validatorIndex = 0; validatorIndex < self.validators.length; ++validatorIndex ) {
-                    if ( !self.validators[ validatorIndex ].call( this, el, event ) ) {
+                let validated = true;
+                this._validators = this._validators || [];
+                for ( let validator_index = 0; validator_index < this._validators.length; ++validator_index ) {
+                    if ( !this._validators[ validator_index ].call( this, el, event ) ) {
                         validated = false;
                         break;
                     }
@@ -182,72 +204,51 @@ Emit.prototype.handleEvent = function( event ) {
                     continue;
                 }
 
-                if ( typeof( self.validate ) === 'function' && !self.validate.call( self, el ) ) {
-                    el = closest( el, selector, false, document );
-                    continue;
-                }
-
                 if ( el.tagName === 'FORM' ) {
                     if ( event.type !== 'submit' ) {
-                        el = closest( el, selector, false, document );
+                        el = closest( el, this.default_selector, false, this._element );
                         continue;
                     }
                 }
                 else if ( el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ) {
                     if ( !( el.type === 'submit' || el.type === 'checkbox' || el.type === 'radio' || el.type === 'file' ) && event.type !== 'input' ) {
-                        el = closest( el, selector, false, document );
+                        el = closest( el, this.default_selector, false, this._element );
                         continue;
                     }
                 }
                 else if ( el.tagName === 'SELECT' ) {
                     if ( event.type !== 'input' ) {
-                        el = closest( el, selector, false, document );
+                        el = closest( el, this.default_selector, false, this._element );
                         continue;
                     }
                 }
 
-                handled |= self._emit( el, event, forceAllowDefault );
-                el = closest( el, selector, false, document );
+                handled |= this._emit( el, event, force_allow_default );
+                el = closest( el, this.default_selector, false, this._element );
             }
 
             if ( !handled ) {
-                self.emit( 'unhandled', event );
+                this.emit( 'unhandled', event );
             }
             else if ( depth >= 100 ) {
                 throw new Error( 'Exceeded depth limit for Emit calls.' );
             }
 
-            self.initialTouchPoint = null;
+            this._initial_touch_point = null;
 
             break;
     }
 };
 
-Emit.prototype._emit = function( element, event, forceDefault ) {
-    var self = this;
+Emit._emit = function( element, event, force_allow_default ) {
+    const options = string_list_to_hash( element.getAttribute( 'data-emit-options' ) || '' );
+    const ignored_events = string_list_to_hash( element.getAttribute( 'data-emit-ignore' ) || '' );
 
-    var optionString = element.getAttribute( 'data-emit-options' );
-    var options = {};
-    var ignoreString = element.getAttribute( 'data-emit-ignore' );
-    var i;
-
-    if ( ignoreString && ignoreString.length ) {
-        var ignoredEvents = ignoreString.toLowerCase().split( ' ' );
-        for ( i = 0; i < ignoredEvents.length; ++i ) {
-            if ( event.type === ignoredEvents[ i ] ) {
-                return false;
-            }
-        }
+    if ( ignored_events[ event.type ] ) {
+        return false;
     }
 
-    if ( optionString && optionString.length ) {
-        var opts = optionString.toLowerCase().split( ' ' );
-        for ( i = 0; i < opts.length; ++i ) {
-            options[ opts[ i ] ] = true;
-        }
-    }
-
-    if ( !forceDefault && !options.allowdefault ) {
+    if ( !force_allow_default && !options.allowdefault ) {
         event.preventDefault();
     }
 
@@ -256,48 +257,47 @@ Emit.prototype._emit = function( element, event, forceDefault ) {
         event.propagationStoppedAt = event.depth;
     }
 
-    var emissionList = element.getAttribute( 'data-emit' );
-    if ( !emissionList ) {
+    const emission_list = element.getAttribute( 'data-emit' );
+    if ( !emission_list ) {
         // allow for empty behaviors that catch events
         return true;
     }
 
-    var emissions = emissionList.split( ',' );
+    const emissions = emission_list.split( /,\s*/g );
     if ( options.debounce ) {
-        self.timeouts = self.timeouts || {};
-        if ( self.timeouts[ element ] ) {
-            clearTimeout( self.timeouts[ element ] );
+        this._timeouts = this._timeouts || {};
+        if ( this._timeouts[ element ] ) {
+            clearTimeout( this._timeouts[ element ] );
         }
 
-        ( function() {
-            var _element = element;
-            var _emissions = emissions;
-            var _event = event;
-            self.timeouts[ element ] = setTimeout( function() {
-                _emissions.forEach( function( emission ) {
-                    self.emit( emission, _event );
+        ( () => {
+            const _element = element;
+            const _emissions = emissions;
+            const _event = event;
+            this._timeouts[ element ] = setTimeout( () => {
+                _emissions.forEach( emission => {
+                    this.emit( emission, _event );
                 } );
-                clearTimeout( self.timeouts[ _element ] );
-                self.timeouts[ _element ] = null;
+                clearTimeout( this._timeouts[ _element ] );
+                this._timeouts[ _element ] = null;
             }, 250 );
         } )();
 
         return true;
     }
 
-    emissions.forEach( function( emission ) {
-        self.emit( emission, event );
+    emissions.forEach( emission => {
+        this.emit( emission, event );
     } );
 
     return true;
 };
 
-Emit.prototype.addValidator = function( validator ) {
-    var self = this;
-
-    var found = false;
-    for ( var i = 0; i < self.validators.length; ++i ) {
-        if ( self.validators[ i ] === validator ) {
+Emit.add_validator = function( validator ) {
+    this._validators = this._validators || [];
+    let found = false;
+    for ( let i = 0; i < this._validators.length; ++i ) {
+        if ( this._validators[ i ] === validator ) {
             found = true;
             break;
         }
@@ -307,17 +307,17 @@ Emit.prototype.addValidator = function( validator ) {
         return false;
     }
 
-    self.validators.push( validator );
+    this._validators.push( validator );
+
     return true;
 };
 
-Emit.prototype.removeValidator = function( validator ) {
-    var self = this;
-
-    var found = false;
-    for ( var i = 0; i < self.validators.length; ++i ) {
-        if ( self.validators[ i ] === validator ) {
-            self.validators.splice( i, 1 );
+Emit.remove_validator = function( validator ) {
+    this._validators = this._validators || [];
+    let found = false;
+    for ( let i = 0; i < this._validators.length; ++i ) {
+        if ( this._validators[ i ] === validator ) {
+            this._validators.splice( i, 1 );
             found = true;
             break;
         }
@@ -326,7 +326,4 @@ Emit.prototype.removeValidator = function( validator ) {
     return found;
 };
 
-Emit.singleton = Emit.singleton || new Emit();
-Emit.singleton.Emit = Emit;
-
-module.exports = Emit.singleton;
+module.exports = Emit;
