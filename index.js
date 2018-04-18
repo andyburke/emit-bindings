@@ -54,14 +54,10 @@ function closest( element, selector, check_self, root ) {
 }
 
 function string_list_to_hash( list, test ) {
-    test = test || /[,|\s]+/g;
-
-    const hash = list.split( test ).reduce( ( _hash, value ) => {
+    return list.length ? list.split( test || /[,|\s]+/g ).reduce( ( _hash, value ) => {
         _hash[ value ] = true;
-        return _hash
-    }, {} );
-
-    return hash;
+        return _hash;
+    }, {} ) : {};
 }
 
 function get_touch_delta( event, initial ) {

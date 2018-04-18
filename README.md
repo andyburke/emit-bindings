@@ -132,6 +132,10 @@ emit.remove_validator( check_busy );
 MIT
 
 # Changelog
+3.0.2
+-----
+* handle empty lists
+
 3.0.1
 -----
 * fix internal string => hash
