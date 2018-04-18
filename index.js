@@ -56,7 +56,7 @@ function closest( element, selector, check_self, root ) {
 function string_list_to_hash( list, test ) {
     test = test || /[,|\s]+/g;
 
-    const hash = list.split( test ).map( ( _hash, value ) => {
+    const hash = list.split( test ).reduce( ( _hash, value ) => {
         _hash[ value ] = true;
         return _hash
     }, {} );

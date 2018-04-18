@@ -132,6 +132,10 @@ emit.remove_validator( check_busy );
 MIT
 
 # Changelog
+3.0.1
+-----
+* fix internal string => hash
+
 3.0.0
 -----
 * update to es2015 const/let
