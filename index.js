@@ -121,7 +121,11 @@ Emit._handle_event = function( event ) {
 
     switch ( event.type ) {
         case 'touchstart':
-            this._initial_touch_point = latest_touch;
+            this._initial_touch_point = this._last_touch_point = latest_touch;
+            break;
+
+        case 'touchmove':
+            this._last_touch_point = latest_touch;
             break;
 
         case 'click':
@@ -129,19 +133,21 @@ Emit._handle_event = function( event ) {
         case 'input':
         case 'submit':
             // eat any late-firing click events on touch devices
-            if ( this._initial_touch_point ) {
-                const delta = get_touch_delta( latest_touch, this._initial_touch_point );
-
+            if ( event.type === 'click' && this._last_touch_point ) {
+                const delta = get_touch_delta( latest_touch, this._last_touch_point );
                 // if the click event hasn't moved from their initial touch point,
                 // we cancel it, since it will have been fired by touchend
-                if ( event.type === 'click' && ( delta < this.touch_move_delta ) ) {
+                if ( delta < this.touch_move_delta ) {
                     event.preventDefault();
                     event.stopPropagation();
                     return;
                 }
+            }
 
-                // if they've moved their finger enough, don't count a touchend event either
-                else if ( event.type === 'touchend' && ( delta > this.touch_move_delta ) ) {
+            // if they've moved their finger enough, don't count a touchend event either
+            if ( event.type === 'touchend' && this._initial_touch_point ) {
+                const delta = get_touch_delta( latest_touch, this._initial_touch_point );
+                if ( delta > this.touch_move_delta ) {
                     event.preventDefault();
                     event.stopPropagation();
                     return;
