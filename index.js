@@ -132,24 +132,20 @@ Emit._handle_event = function( event ) {
         case 'touchend':
         case 'input':
         case 'submit':
-            // eat any late-firing click events on touch devices
-            if ( event.type === 'click' && this._last_touch_point ) {
-                const delta = get_touch_delta( latest_touch, this._last_touch_point );
-                // if the click event hasn't moved from their initial touch point,
-                // we cancel it, since it will have been fired by touchend
-                if ( delta < this.touch_move_delta ) {
-                    event.preventDefault();
-                    event.stopPropagation();
+            // if they've moved their finger enough, don't count a touchend event
+            if ( event.type === 'touchend' && this._initial_touch_point ) {
+                const delta = get_touch_delta( latest_touch, this._initial_touch_point );
+                if ( delta > this.touch_move_delta ) {
                     return;
                 }
             }
 
-            // if they've moved their finger enough, don't count a touchend event either
-            if ( event.type === 'touchend' && this._initial_touch_point ) {
-                const delta = get_touch_delta( latest_touch, this._initial_touch_point );
-                if ( delta > this.touch_move_delta ) {
-                    event.preventDefault();
-                    event.stopPropagation();
+            // eat any late-firing click events on touch devices
+            if ( event.type === 'click' && this._last_touch_point ) {
+                const delta = get_touch_delta( latest_touch, this._last_touch_point );
+                // if the click event hasn't moved from their initial touch point,
+                // we ignore it, since it will have been fired by touchend
+                if ( delta < this.touch_move_delta ) {
                     return;
                 }
             }
