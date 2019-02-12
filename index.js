@@ -4,6 +4,8 @@
 const binding_method = window.addEventListener ? 'addEventListener' : 'attachEvent';
 const event_prefix = binding_method !== 'addEventListener' ? 'on' : '';
 
+const MINIMUM_SAME_ELEMENT_TIME_DELTA = 50;
+
 function bind( el, type, fn, capture ) {
     el[ binding_method ]( event_prefix + type, fn, capture || false );
     return fn;
@@ -112,6 +114,7 @@ Emit.emit = Emit.trigger = function( event /* ... args */ ) {
     } );
 };
 
+Emit._latest_handled_event = null;
 Emit._handle_event = function( event ) {
     const latest_touch = ( event.touches && event.touches.length && event.touches[ 0 ] ) || ( event.changedTouches && event.changedTouches.length && event.changedTouches[ 0 ] ) || event;
 
@@ -181,13 +184,21 @@ Emit._handle_event = function( event ) {
                     }
                 }
 
-                // eat the event if a validator failed
+                // eat the event if a validator failed or if 
                 if ( !validated ) {
                     event.preventDefault();
                     event.stopPropagation();
                     event.propagationStoppedAt = depth;
                     el = null;
                     this._initial_touch_point = null;
+                    this._latest_handled_event = null;
+                    continue;
+                }
+
+                // if this looks like a similar event (eg: 'click' followed by 'input'), don't emit a second time
+                const is_similar_event = this._latest_handled_event && this._latest_handled_event.el && this._latest_handled_event.el === el && ( event.timeStamp - this._latest_handled_event.timeStamp < MINIMUM_SAME_ELEMENT_TIME_DELTA );
+                if ( is_similar_event ) {
+                    el = null;
                     continue;
                 }
 
@@ -222,6 +233,7 @@ Emit._handle_event = function( event ) {
             }
 
             this._initial_touch_point = null;
+            this._latest_handled_event = event;
 
             break;
     }

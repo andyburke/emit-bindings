@@ -132,6 +132,23 @@ emit.remove_validator( check_busy );
 MIT
 
 # Changelog
+4.0.0
+-----
+* ignore "similar" events (eg: click immediately followed by input on a checkbox)
+* bumped major version in case this causes compatibility issues
+
+3.0.5
+-----
+* fix clicks being ignored
+
+3.0.4
+-----
+* fix late-firing click events
+
+3.0.3
+-----
+* code cleanup and minor improvement to event handling
+
 3.0.2
 -----
 * handle empty lists
